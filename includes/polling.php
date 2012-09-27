@@ -325,7 +325,7 @@ function thold_update_host_status () {
 					//cacti_log('THOLD: after thold_save_recover_history', true, 'POLLER');
 					
 					if ($thold_enable_sms == 'on' && $host['monitor'] == 'on') {
-						thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y')  . ' => ' . $subject);
+						thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y, H:i')  . ' => ' . $subject);
 					}
 				}
 			}
@@ -426,7 +426,7 @@ function thold_update_host_status () {
 			}
 
 			if ($thold_enable_sms == 'on' && $host['monitor'] == 'on') {
-				thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y')  . ' => ' . $subject);
+				thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y, H:i')  . ' => ' . $subject);
 			}
 		}
 	}
