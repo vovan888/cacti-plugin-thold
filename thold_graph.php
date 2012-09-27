@@ -78,7 +78,8 @@ delete_old_thresholds();
 $tabs_thold = array(
 	"thold" => "Thresholds",
 	"log" => "Log",
-	"hoststat" => "Host Status");
+	"hoststat" => "Host Status",
+	"history" => "History");
 
 /* set the default tab */
 if (isset($_REQUEST["tab"])) {
@@ -111,6 +112,8 @@ if ($current_tab == 'thold') {
 	tholds();
 }elseif ($current_tab == 'hoststat') {
 	hosts();
+}elseif ($current_tab == 'history') {
+	thold_show_history();
 }else{
 	thold_show_log();
 }
@@ -962,6 +965,300 @@ function form_host_filter() {
 	<?php
 }
 
+function thold_show_history() {
+	global $config, $colors, $item_rows;
+
+	$thold_background = array(
+		'0'     => 'CCFFCC',
+		'1'     => 'CDCFC4');
+
+	/* ================= input validation ================= */
+	input_validate_input_number(get_request_var_request("host_id"));
+	input_validate_input_number(get_request_var_request("page"));
+	input_validate_input_number(get_request_var_request("rows"));
+	input_validate_input_number(get_request_var_request("month"));
+	/* ==================================================== */
+
+	/* clean up search string */
+	if (isset($_REQUEST["filter"])) {
+		$_REQUEST["filter"] = sanitize_search_string(get_request_var("filter"));
+	}
+
+	/* clean up sort_column */
+	if (isset($_REQUEST["sort_column"])) {
+		$_REQUEST["sort_column"] = sanitize_search_string(get_request_var("sort_column"));
+	}
+
+	/* clean up search string */
+	if (isset($_REQUEST["sort_direction"])) {
+		$_REQUEST["sort_direction"] = sanitize_search_string(get_request_var("sort_direction"));
+	}
+
+	/* clean up search string */
+	if (isset($_REQUEST["month"])) {
+		$_REQUEST["month"] = sanitize_search_string(get_request_var("month"));
+	}
+	/* if the user pushed the 'clear' button */
+	if (isset($_REQUEST["clear"])) {
+		kill_session_var("sess_thold_history_current_page");
+		kill_session_var("sess_thold_history_host_id");
+		kill_session_var("sess_thold_history_rows");
+		kill_session_var("sess_thold_history_sort_column");
+		kill_session_var("sess_thold_history_sort_direction");
+		kill_session_var("sess_thold_history_month");
+
+		unset($_REQUEST["page"]);
+		unset($_REQUEST["filter"]);
+		unset($_REQUEST["host_id"]);
+		unset($_REQUEST["rows"]);
+		unset($_REQUEST["sort_column"]);
+		unset($_REQUEST["sort_direction"]);
+		unset($_REQUEST["month"]);
+	} else {
+		/* if any of the settings changed, reset the page number */
+		$changed = 0;
+		$changed += thold_request_check_changed('filter', 'sess_thold_history_filter');
+		$changed += thold_request_check_changed('host_id', 'sess_thold_history_host_id');
+		$changed += thold_request_check_changed('rows', 'sess_thold_history_rows');
+		$changed += thold_request_check_changed('sort_column', 'sess_thold_history_sort_column');
+		$changed += thold_request_check_changed('sort_direction', 'sess_thold_history_sort_direction');
+		$changed += thold_request_check_changed('month', 'sess_thold_history_month');
+		if ($changed) {
+			$_REQUEST['page'] = '1';
+		}
+	}
+
+	/* remember these search fields in session vars so we don't have to keep passing them around */
+	load_current_session_value("page", "sess_thold_history_current_page", "1");
+	load_current_session_value("host_id", "sess_thold_history_host_id", "-1");
+	load_current_session_value("rows", "sess_thold_history_rows", read_config_option("num_rows_device"));
+	load_current_session_value("sort_column", "sess_thold_history_sort_column", "host_id");
+	load_current_session_value("sort_direction", "sess_thold_history_sort_direction", "DESC");
+	load_current_session_value("month", "sess_thold_history_month", "0");
+
+	/* if the number of rows is -1, set it to the default */
+	if ($_REQUEST["rows"] == -1) {
+		$_REQUEST["rows"] = read_config_option("num_rows_device");
+	}
+
+	?>
+	<script type="text/javascript">
+	<!--
+	function filterChange(objForm) {
+		strURL = '?tab=history';
+		strURL = strURL + '&host_id=' + objForm.host_id.value;
+		strURL = strURL + '&rows=' + objForm.rows.value;
+		strURL = strURL + '&month=' + objForm.month.value;
+		document.location = strURL;
+	}
+	-->
+	</script>
+	<?php
+
+	html_start_box("<strong>Host History</strong>", "100%", $colors["header"], "3", "center", "");
+	form_thold_history_filter();
+	html_end_box();
+
+	$sql_where = '';
+
+	if ($_REQUEST["host_id"] == "-1") {
+		/* Show all items */
+	}elseif ($_REQUEST["host_id"] == "0") {
+		$sql_where .= (strlen($sql_where) ? " AND":"WHERE") . " host.id IS NULL";
+	}elseif (!empty($_REQUEST["host_id"])) {
+		$sql_where .= (strlen($sql_where) ? " AND":"WHERE") . " thold_history.host_id=" . $_REQUEST["host_id"];
+	}
+
+	if ($_REQUEST['month'] == '0') {
+		//show all item
+	}elseif ($_REQUEST['month'] > 0 && $_REQUEST['month'] < 13) {
+		$sql_where .= (strlen($sql_where) ? " AND":"WHERE") . " MONTH(thold_history.status_fail_date) = " . $_REQUEST['month'];
+	}
+	
+	html_start_box("", "100%", $colors["header"], "3", "center", "");
+
+	$sortby = $_REQUEST["sort_column"];
+
+	$total_rows = db_fetch_cell("SELECT COUNT(*) FROM thold_history " . $sql_where);
+
+	$sql_query = "SELECT thold_history.host_id, thold_history.status, thold_history.cur_time, thold_history.avg_time, thold_history.availability, thold_history.total_polls, thold_history.failed_polls, thold_history.status_fail_date, thold_history.downtime, host.description AS hdescription FROM thold_history LEFT JOIN host ON thold_history.host_id=host.id " . $sql_where . " ORDER BY " . $sortby . " " . $_REQUEST["sort_direction"] . " LIMIT " . ($_REQUEST["rows"]*($_REQUEST["page"]-1)) . "," . $_REQUEST["rows"];
+
+	//print $sql_query;
+
+	$logs = db_fetch_assoc($sql_query);
+
+	/* generate page list */
+	$url_page_select = get_page_list($_REQUEST["page"], MAX_DISPLAY_PAGES, $_REQUEST["rows"], $total_rows, "thold_graph.php?tab=history");
+
+	if ($total_rows) {
+		$nav = "<tr bgcolor='#" . $colors["header"] . "'>
+				<td colspan='11'>
+					<table width='100%' cellspacing='0' cellpadding='0' border='0'>
+						<tr>
+							<td align='left' class='textHeaderDark'>
+								<strong>&lt;&lt; "; if ($_REQUEST["page"] > 1) { $nav .= "<a class='linkOverDark' href='" . htmlspecialchars("thold_graph.php?tab=history&page=" . ($_REQUEST["page"]-1)) . "'>"; } $nav .= "Previous"; if ($_REQUEST["page"] > 1) { $nav .= "</a>"; } $nav .= "</strong>
+							</td>\n
+							<td align='center' class='textHeaderDark'>
+								Showing Rows " . (($_REQUEST["rows"]*($_REQUEST["page"]-1))+1) . " to " . ((($total_rows < read_config_option("num_rows_device")) || ($total_rows < ($_REQUEST["rows"]*$_REQUEST["page"]))) ? $total_rows : ($_REQUEST["rows"]*$_REQUEST["page"])) . " of $total_rows [$url_page_select]
+							</td>\n
+							<td align='right' class='textHeaderDark'>
+								<strong>"; if (($_REQUEST["page"] * $_REQUEST["rows"]) < $total_rows) { $nav .= "<a class='linkOverDark' href='" . htmlspecialchars("thold_graph.php?tab=history&page=" . ($_REQUEST["page"]+1)) . "'>"; } $nav .= "Next"; if (($_REQUEST["page"] * $_REQUEST["rows"]) < $total_rows) { $nav .= "</a>"; } $nav .= " &gt;&gt;</strong>
+							</td>\n
+						</tr>
+					</table>
+				</td>
+			</tr>\n";
+	}else{
+		$nav = "<tr bgcolor='#" . $colors["header"] . "'>
+				<td colspan='11'>
+					<table width='100%' cellspacing='0' cellpadding='0' border='0'>
+						<tr>
+							<td align='center' class='textHeaderDark'>
+								No Rows Found
+							</td>\n
+						</tr>
+					</table>
+				</td>
+			</tr>\n";
+	}
+
+	print $nav;
+
+	$display_text = array(
+		"hdescription" => array("<br>Host", "ASC"),
+		"status" => array("<br>STATUS", "ASC"),
+		"cur_time" => array("Current (ms)", "ASC"),
+		"avg_time" => array("Average (ms)", "ASC"),
+		"availability" => array("<br>Availability", "DESC"),
+		"total_polls" => array("<br>Total Polls", "DESC"),
+		"failed_polls" => array("<br>Failed Polls", "DESC"),
+		"status_fail_date" => array("<br>Failed Date", "DESC"),
+		"downtime" => array("<br>Down Time", "ASC"));
+
+	html_header_sort($display_text, $_REQUEST["sort_column"], $_REQUEST["sort_direction"]);
+
+	$i = 0;
+	$total_downtime = 0;
+	if (sizeof($logs)) {
+		foreach ($logs as $l) {
+			$downtime = (int) $l["downtime"];
+			$total_downtime += $downtime;
+			$fail_date = strtotime($l["status_fail_date"], 0);
+			$start_fail = date('n', $fail_date);
+			$end_fail = date('n', $fail_date + $downtime);
+			if ($end_fail == $start_fail) {
+			?>
+				<tr style='background-color:#<?php print $thold_background[$i%2];?>'>
+				<td nowrap style='white-space:nowrap;'><?php print $l["hdescription"];?></td>
+				<td nowrap style='white-space:nowrap;'><?php print $l["status"];?></td>
+				<td nowrap style='white-space:nowrap;'><?php print round(($l["cur_time"]), 2);?></td>
+				<td nowrap style='white-space:nowrap;'><?php print round(($l["avg_time"]), 2);?></td>
+				<td nowrap style='white-space:nowrap;'><?php print round(($l["availability"]), 2);?></td>
+				<td nowrap style='white-space:nowrap;'><?php print $l["total_polls"];?></td>
+				<td nowrap style='white-space:nowrap;'><?php print $l["failed_polls"];?></td>
+				<td nowrap style='white-space:nowrap;'><?php print $l["status_fail_date"];?></td>
+				<?php
+					$downtime = (int) $l["downtime"];
+					$downtime_days = floor($downtime/86400);
+					$downtime_hours = floor(($downtime - ($downtime_days * 86400))/3600);
+					$downtime_minutes = floor(($downtime - ($downtime_days * 86400) - ($downtime_hours * 3600))/60);
+					$downtime_seconds = $downtime - ($downtime_days * 86400) - ($downtime_hours * 3600) - ($downtime_minutes * 60);
+					if ($downtime_days > 0 ) {
+						$downtimemsg = $downtime_days . "d " . $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s ";
+					} elseif ($downtime_hours > 0 ) {
+						$downtimemsg = $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s";
+					} elseif ($downtime_minutes > 0 ) {
+						$downtimemsg = $downtime_minutes . "m " . $downtime_seconds . "s";
+					} else {
+						$downtimemsg = $downtime_seconds . "s ";
+					}//if $downtime_days > 0
+					$i++;
+
+				?>
+				<td nowrap style='white-space:nowrap;'><?php print $downtimemsg;?></td>
+			<?php
+				form_end_row();
+			} else {
+				for($z=0; $z<2; $z++) {
+			?>
+					<tr style='background-color:#<?php print $thold_background[$i%2];?>'>
+					<td nowrap style='white-space:nowrap;'><?php print $l["hdescription"];?></td>
+					<td nowrap style='white-space:nowrap;'><?php print $l["status"];?></td>
+					<td nowrap style='white-space:nowrap;'><?php print round(($l["cur_time"]), 2);?></td>
+					<td nowrap style='white-space:nowrap;'><?php print round(($l["avg_time"]), 2);?></td>
+					<td nowrap style='white-space:nowrap;'><?php print round(($l["availability"]), 2);?></td>
+					<td nowrap style='white-space:nowrap;'><?php print $l["total_polls"];?></td>
+					<td nowrap style='white-space:nowrap;'><?php print $l["failed_polls"];?></td>
+					<?php
+					if($z == 0) {
+					?>
+						<td nowrap style='white-space:nowrap;'><?php print $l["status_fail_date"];?></td>
+					<?php
+						$midnight = mktime(23, 59, 59, date('n', $fail_date), date('j', $fail_date), date('Y', $fail_date));
+						$downtime = $midnight - $fail_date;
+					} else {
+					?>
+						<td nowrap style='white-space:nowrap;'><?php print date('Y-m-d H:i:s', mktime(0, 0, 0, date('n', $fail_date), date('j', $fail_date) + 1, date('Y', $fail_date)));?></td>
+					<?php
+						$downtime = ((int) $l['downtime']) - $downtime;
+					}
+						$downtime_days = floor($downtime/86400);
+						$downtime_hours = floor(($downtime - ($downtime_days * 86400))/3600);
+						$downtime_minutes = floor(($downtime - ($downtime_days * 86400) - ($downtime_hours * 3600))/60);
+						$downtime_seconds = $downtime - ($downtime_days * 86400) - ($downtime_hours * 3600) - ($downtime_minutes * 60);
+						if ($downtime_days > 0 ) {
+							$downtimemsg = $downtime_days . "d " . $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s ";
+						} elseif ($downtime_hours > 0 ) {
+							$downtimemsg = $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s";
+						} elseif ($downtime_minutes > 0 ) {
+							$downtimemsg = $downtime_minutes . "m " . $downtime_seconds . "s";
+						} else {
+							$downtimemsg = $downtime_seconds . "s ";
+						}//if
+						
+					?>
+					<td nowrap style='white-space:nowrap;'><?php print $downtimemsg;?></td>
+					
+			<?php
+					form_end_row();
+
+				}//for
+				$i++;
+			}//if
+			
+		}//foreach
+	?>
+		<tr><td colspan='7'></td><td>Total:</td><td>
+	<?php 
+		$downtime_days = floor($total_downtime/86400);
+		$downtime_hours = floor(($total_downtime - ($downtime_days * 86400))/3600);
+		$downtime_minutes = floor(($total_downtime - ($downtime_days * 86400) - ($downtime_hours * 3600))/60);
+		$downtime_seconds = $total_downtime - ($downtime_days * 86400) - ($downtime_hours * 3600) - ($downtime_minutes * 60);
+		if ($downtime_days > 0 ) {
+			$total_downtimemsg = $downtime_days . "d " . $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s ";
+		} elseif ($downtime_hours > 0 ) {
+			$total_downtimemsg = $downtime_hours . "h " . $downtime_minutes . "m " . $downtime_seconds . "s";
+		} elseif ($downtime_minutes > 0 ) {
+			$total_downtimemsg = $downtime_minutes . "m " . $downtime_seconds . "s";
+		} else {
+			$total_downtimemsg = $downtime_seconds . "s ";
+		}//if
+		print $total_downtimemsg;
+	?>
+		</td></tr>
+	<?php
+	}else{
+		print "<tr><td><em>No Host Up History Found</em></td></tr>";
+	}//if
+
+	/* put the nav bar on the bottom as well */
+	print $nav;
+
+	html_end_box(false);
+
+	//thold_display_rusage();
+}
+
 function thold_show_log() {
 	global $config, $colors, $item_rows;
 
@@ -1323,6 +1620,87 @@ function form_thold_log_filter() {
 			</table>
 			<input type='hidden' name='page' value='1'>
 			<input type='hidden' name='tab' value='log'>
+		</form>
+		</td>
+	</tr>
+	<?php
+}
+
+function form_thold_history_filter() {
+	global $item_rows, $config, $colors;
+
+	?>
+	<tr bgcolor='#<?php print $colors["panel"];?>'>
+		<td>
+		<form name='form_thold_history' action='thold_graph.php?tab=history'>
+			<table cellpadding='0' cellspacing='0'>
+				<tr>
+					<td width='50'>
+						&nbsp;Host:&nbsp;
+					</td>
+					<td width='1'>
+						<select name='host_id' onChange='filterChange(document.form_thold_history)'>
+							<option value='-1'<?php if ($_REQUEST["host_id"] == "-1") {?> selected<?php }?>>All</option>
+							<option value='0'<?php if ($_REQUEST["host_id"] == "0") {?> selected<?php }?>>None</option>
+							<?php
+							$ids = db_fetch_assoc("SELECT DISTINCT host.id, host.description " .
+								"FROM host " .
+								"INNER JOIN thold_history ON host.id=thold_history.host_id " .
+								" ORDER by host.description");
+
+							if (sizeof($ids)) {
+								foreach ($ids as $id) {
+									print "<option value='" . $id["id"] . "'"; if ($_REQUEST["host_id"] == $id["id"]) { print " selected"; } print ">" . $id["description"] . "</option>\n";
+								}
+							}
+							?>
+						</select>
+					</td>
+					<td width='1'>
+						&nbsp;Rows:&nbsp;
+					</td>
+					<td width='1'>
+						<select name='rows' onChange='filterChange(document.form_thold_history)'>
+							<option value='-1'<?php if ($_REQUEST["rows"] == "-1") {?> selected<?php }?>>Default</option>
+							<?php
+							if (sizeof($item_rows)) {
+							foreach ($item_rows as $key => $value) {
+								print "<option value='" . $key . "'"; if ($_REQUEST["rows"] == $key) { print " selected"; } print ">" . $value . "</option>\n";
+							}
+							}
+							?>
+						</select>
+					</td>
+					<td width='50'>
+						&nbsp;Month:&nbsp;
+					</td>
+					<td width='1'>
+						<select name='month' onChange='filterChange(document.form_thold_history)'>
+							<option value='0'<?php if ($_REQUEST["month"] == "0") {?> selected<?php }?>>All</option>
+							<option value='1'<?php if ($_REQUEST["month"] == "1") {?> selected<?php }?>>January</option>
+							<option value='2'<?php if ($_REQUEST["month"] == "2") {?> selected<?php }?>>February</option>
+							<option value='3'<?php if ($_REQUEST["month"] == "3") {?> selected<?php }?>>March</option>
+							<option value='4'<?php if ($_REQUEST["month"] == "4") {?> selected<?php }?>>April</option>
+							<option value='5'<?php if ($_REQUEST["month"] == "5") {?> selected<?php }?>>May</option>
+							<option value='6'<?php if ($_REQUEST["month"] == "6") {?> selected<?php }?>>June</option>
+							<option value='7'<?php if ($_REQUEST["month"] == "7") {?> selected<?php }?>>July</option>
+							<option value='8'<?php if ($_REQUEST["month"] == "8") {?> selected<?php }?>>August</option>
+							<option value='9'<?php if ($_REQUEST["month"] == "9") {?> selected<?php }?>>September</option>
+							<option value='10'<?php if ($_REQUEST["month"] == "10") {?> selected<?php }?>>October</option>
+							<option value='11'<?php if ($_REQUEST["month"] == "11") {?> selected<?php }?>>November</option>
+							<option value='12'<?php if ($_REQUEST["month"] == "12") {?> selected<?php }?>>December</option>
+						</select>
+					</td>
+					<td width='1'>
+						<input type="submit" value="Go">
+					</td>
+					<td width='1'>
+						<input id="clear" name="clear" type="submit" value="Clear">
+					</td>
+				</tr>
+			</table>
+			<input type='hidden' name='page' value='1'>
+			<input type='hidden' name='tab' value='history'>
 		</form>
 		</td>
 	</tr>

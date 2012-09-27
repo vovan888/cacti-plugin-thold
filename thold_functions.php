@@ -3069,6 +3069,14 @@ function get_thold_notification_emails($id) {
 	}
 }
 
+function get_thold_notification_phones($id) {
+	if (!empty($id)) {
+		return trim(db_fetch_cell('SELECT phones FROM plugin_notification_lists WHERE id=' . $id));
+	} else {
+		return '';
+	}
+}
+
 /* get_hash_thold_template - returns the current unique hash for a thold_template
    @arg $id - (int) the ID of the thold template to return a hash for
    @returns - a 128-bit, hexadecimal hash */
@@ -3104,4 +3112,33 @@ function array2xml($array, $tag = 'template') {
 	$index++;
 
 	return $xml;
+}
+
+function thold_sms($numbers, $msg) {
+	global $debug;
+
+	$command = '';
+	$command_output = array();
+	$command_return = 999;
+	$gammu_smsd_inject_path = trim(read_config_option('thold_gammu_smsd_inject_path'));
+	$thold_sendsms_path = trim(read_config_option('thold_sendsms_path'));
+
+	$sms_numbers = explode(',', $numbers);
+
+	foreach($sms_numbers as $key => $value) {
+		if (strlen($thold_sendsms_path)>2) {
+			$command = 'bash ' . $thold_sendsms_path . ' ' . trim($value) . ' "' . $msg . '"';
+		} else {
+			$command = $gammu_smsd_inject_path . ' EMS ' . trim($value) . ' -text "' . $msg . '"';
+		}
+//		shell_exec('ls /tmp 2>&1 >> /tmp/log');
+		exec($command, $command_output, $command_return);
+		//if (read_config_option("log_verbosity") >= POLLER_VERBOSITY_DEBUG || $debug) {
+			cacti_log('DEBUG: thold_sms: command ==>' . $command, true, 'POLLER');
+			foreach ($command_output as $key => $value) {
+				cacti_log('DEBUG: thold_sms: command output ==> ' . $key . ' = ' . $value, true, 'POLLER');
+			}
+			cacti_log('DEBUG: thold_sms: command return value ==> ' . $command_return, true, 'POLLER');
+		//}
+	}
 }

@@ -159,6 +159,8 @@ function thold_update_host_status () {
 	}
 
 	$alert_email = read_config_option('alert_email');
+	$thold_save_recover_history = read_config_option('thold_save_recover_history');
+	$thold_enable_sms = read_config_option('thold_enable_sms');
 	$ping_failure_count = read_config_option('ping_failure_count');
 
 	// Lets find hosts that were down, but are now back up
@@ -272,18 +274,22 @@ function thold_update_host_status () {
 					$msg = str_replace("\n", '<br>', $msg);
 					
 					$alert_email = read_config_option('alert_email');
+					$thold_phone_number = read_config_option('thold_global_phone_number');
 					switch($host['thold_send_email']) {
 						case '0': // Disabled
 							$alert_email = '';
+							$thold_phone_number = '';
 							break;
 						case '1': // Global List
 						  $alert_email = read_config_option('alert_email');
 							break;
 						case '2': // Host List Only
 							$alert_email = get_thold_notification_emails($host['thold_host_email']);
+							$thold_phone_number = get_thold_notification_phones($host['thold_host_email']);
 							break;
 						case '3': // Global and Host List
 							$alert_email = $alert_email . ',' . get_thold_notification_emails($host['thold_host_email']);
+							$thold_phone_number = $thold_phone_number . ',' . get_thold_notification_phones($host['thold_host_email']);
 							break;
 					}
 
@@ -293,6 +299,33 @@ function thold_update_host_status () {
 						cacti_log('THOLD: Did not send a Host Recovering Email, disabled per host setting : ' . $host['description'] . ' !', true, 'POLLER');
 					} elseif ($alert_email != '') {
 						thold_mail($alert_email, '', $subject, $msg, '');
+						cacti_log('THOLD: Sent Email ' . $host['description'] . ' !', true, 'POLLER');
+					}
+
+					//cacti_log('THOLD: before thold_save_recover_history', true, 'POLLER');
+
+					if ($thold_save_recover_history == 'on' && $host['monitor'] == 'on') {
+						$thold_sql = 'INSERT INTO thold_history (host_id, status, cur_time, avg_time, availability, total_polls, failed_polls, status_fail_date, downtime) VALUES (<HOSTID>, <DOWN/UP>, "<CUR_TIME>", "<AVG_TIME>", <AVAILABILITY>, <TOT_POLL>, <FAIL_POLL>, "<LAST_FAIL>", <DOWNTIME>)';
+						
+						$thold_sql = str_replace('<HOSTID>', $fh['host_id'], $thold_sql);
+						$thold_sql = str_replace('<DOWN/UP>', HOST_UP, $thold_sql);
+						$thold_sql = str_replace('<CUR_TIME>', round(($host['cur_time']), 2), $thold_sql);
+						$thold_sql = str_replace('<AVG_TIME>', round(($host['avg_time']), 2), $thold_sql);
+						$thold_sql = str_replace('<AVAILABILITY>', round(($host['availability']), 2), $thold_sql);
+						$thold_sql = str_replace('<TOT_POLL>', $host['total_polls'], $thold_sql);
+						$thold_sql = str_replace('<FAIL_POLL>', $host['failed_polls'], $thold_sql);
+						$thold_sql = str_replace('<LAST_FAIL>', $host['status_fail_date'], $thold_sql);
+						$thold_sql = str_replace('<DOWNTIME>', $downtime, $thold_sql);
+
+						$thold_sql = sql_sanitize($thold_sql);
+						cacti_log('THOLD: thold_sql = ' . $thold_sql, true, 'POLLER');
+						db_execute($thold_sql, true);
+					}
+					
+					//cacti_log('THOLD: after thold_save_recover_history', true, 'POLLER');
+					
+					if ($thold_enable_sms == 'on' && $host['monitor'] == 'on') {
+						thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y')  . ' => ' . $subject);
 					}
 				}
 			}
@@ -364,18 +397,22 @@ function thold_update_host_status () {
 			$msg = str_replace("\n", '<br>', $msg);
 			
 			$alert_email = read_config_option('alert_email');
+			$thold_phone_number = read_config_option('thold_global_phone_number');
 			switch($host['thold_send_email']) {
 				case '0': // Disabled
 					$alert_email = '';
+					$thold_phone_number = '';
 					break;
 				case '1': // Global List
 				  $alert_email = read_config_option('alert_email');
 					break;
 				case '2': // Host List Only
 					$alert_email = get_thold_notification_emails($host['thold_host_email']);
+					$thold_phone_number = get_thold_notification_phones($host['thold_host_email']);
 					break;
 				case '3': // Global and Host List
 					$alert_email = $alert_email . ',' . get_thold_notification_emails($host['thold_host_email']);
+					$thold_phone_number = $thold_phone_number . ',' . get_thold_notification_phones($host['thold_host_email']);
 					break;
 			}
 
@@ -385,6 +422,11 @@ function thold_update_host_status () {
 				cacti_log('THOLD: Did not send a Host Down Email, disabled per host setting : ' . $host['description'] . ' !', true, 'POLLER');
 			} elseif ($alert_email != '') {
 				thold_mail($alert_email, '', $subject, $msg, '');
+				cacti_log('THOLD: Sent Email ' . $host['description'] . ' !', true, 'POLLER');
+			}
+
+			if ($thold_enable_sms == 'on' && $host['monitor'] == 'on') {
+				thold_sms($thold_phone_number, 'On ' . date('l, d-M-Y')  . ' => ' . $subject);
 			}
 		}
 	}

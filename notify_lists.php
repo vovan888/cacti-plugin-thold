@@ -92,6 +92,7 @@ function form_save() {
 		$save["name"] = form_input_validate($_POST["name"], "name", "", false, 3);
 		$save["description"] = form_input_validate($_POST["description"], "description", "", false, 3);
 		$save["emails"] = form_input_validate($_POST["emails"], "emails", "", false, 3);
+		$save["phones"] = form_input_validate($_POST["phones"], "phones", "", false, 3);
 
 		if (!is_error_message()) {
 			$id = sql_save($save, "plugin_notification_lists");
@@ -604,6 +605,15 @@ function edit() {
 				"friendly_name" => "Email Addresses",
 				"description" => "Enter a comma separated list of Email addresses for this notification list.",
 				"value" => "|arg1:emails|",
+				"class" => "textAreaNotes",
+				"textarea_rows" => "4",
+				"textarea_cols" => "80"
+			),
+			"phones" => array(
+				"method" => "textarea",
+				"friendly_name" => "Phone numbers to send SMS",
+				"description" => "Enter a comma separated list of phone numbers for this notification list.",
+				"value" => "|arg1:phones|",
 				"class" => "textAreaNotes",
 				"textarea_rows" => "4",
 				"textarea_cols" => "80"
@@ -1986,7 +1996,7 @@ function lists() {
 		FROM plugin_notification_lists
 		$sql_where");
 
-	$lists = db_fetch_assoc("SELECT id, name, description, emails
+	$lists = db_fetch_assoc("SELECT id, name, description, emails, phones
 		FROM plugin_notification_lists
 		$sql_where
 		ORDER BY " . get_request_var_request("sort_column") . " " . get_request_var_request("sort_direction") .
@@ -2032,7 +2042,8 @@ function lists() {
 	$display_text = array(
 		"name" => array("List Name", "ASC"),
 		"description" => array("Description", "ASC"),
-		"emails" => array("Emails", "ASC"));
+		"emails" => array("Emails", "ASC"),
+		"phones" => array("Phones", "ASC"));
 
 	html_header_sort_checkbox($display_text, get_request_var_request("sort_column"), get_request_var_request("sort_direction"), false);
 
@@ -2043,6 +2054,7 @@ function lists() {
 			form_selectable_cell("<a class='linkEditMain' href='" . htmlspecialchars("notify_lists.php?action=edit&id=" . $item["id"]) . "'>" . (strlen(get_request_var_request("filter")) ? preg_replace("/(" . preg_quote(get_request_var_request("filter")) . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", htmlspecialchars($item["name"])) : htmlspecialchars($item["name"])) . "</a>", $item["id"], "25%");
 			form_selectable_cell((strlen(get_request_var_request("filter")) ? preg_replace("/(" . preg_quote(get_request_var_request("filter")) . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", $item["description"]) : $item["description"]) . "</a>", $item["id"], "35%");
 			form_selectable_cell((strlen(get_request_var_request("filter")) ? preg_replace("/(" . preg_quote(get_request_var_request("filter")) . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", $item["emails"]) : $item["emails"]) . "</a>", $item["id"]);
+			form_selectable_cell((strlen(get_request_var_request("filter")) ? preg_replace("/(" . preg_quote(get_request_var_request("filter")) . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", $item["phones"]) : $item["phones"]) . "</a>", $item["id"]);
 			form_checkbox_cell($item["name"], $item["id"]);
 			form_end_row();
 		}

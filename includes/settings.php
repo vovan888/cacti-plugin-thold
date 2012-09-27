@@ -197,6 +197,12 @@ function thold_config_settings () {
 			'method' => 'checkbox',
 			'default' => 'off'
 			),
+		'thold_save_recover_history' => array(
+			'friendly_name' => 'Save History to SQL Table',
+			'description' => 'This will save host recovering event to thold SQL table',
+			'method' => 'checkbox',
+			'default' => 'off'
+			),
 		'thold_alerting_header' => array(
 			'friendly_name' => 'Default Alerting Options',
 			'method' => 'spacer',
@@ -336,6 +342,38 @@ function thold_config_settings () {
 			'method' => 'checkbox',
 			'default' => 'off'
 			),
+		'thold_sms_header' => array(
+			'friendly_name' => 'SMS Sending Options',
+			'method' => 'spacer',
+			),
+		'thold_enable_sms' => array(
+                        'friendly_name' => 'Enable SMS sending',
+                        'description' => 'If checked, this will cause Cacti to send SMS to numbers in Notification Lists.',
+                        'method' => 'checkbox',
+                        'default' => 'off',
+                        ),
+		'thold_global_phone_number' => array(
+			'friendly_name' => 'Dead Host Notifications phone number for SMS',
+			'description' => 'This is the phone number that the Dead Host Notifications will be sent to if the Global Notification List is selected.',
+			'method' => 'textbox',
+			'size' => 40,
+			'max_length' => 255,
+			),
+                'thold_gammu_smsd_inject_path' => array(
+                        'friendly_name' => 'Path to gammu-smsd-inject',
+                        'description' => 'This is the path to gammu sms inject binary',
+                        'method' => 'filepath',
+			'size' => 80,
+                        'max_length' => 255,
+                        ),
+                'thold_sendsms_path' => array(
+                        'friendly_name' => 'Path to sendsms script',
+                        'description' => 'This is the path to sendsms script from SMS Server Tools 3',
+                        'method' => 'filepath',
+			'size' => 80,
+                        'max_length' => 255,
+                        'default' => $config['base_path'] . '/plugins/thold/extras/sendsms'
+                        ),
 		'thold_baseline_header' => array(
 			'friendly_name' => 'Default Baseline Settings',
 			'method' => 'spacer',

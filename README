@@ -31,6 +31,9 @@
 	Got any ideas or complaints, please e-mail me!
 
 ----[ Changelog
+	--- 0.5.0 ---
+		feature: Host Up History (based on http://forums.cacti.net/viewtopic.php?f=17&t=46539)
+		feature: SMS in notification lists (uses gammu or smstools)
 	--- 0.4.9 ---
 		feature: Allow HRULES based upon HI/LOW Value portions courtesy of Barnaby Puttick
 		bug: Restoral Emails not working in all cases

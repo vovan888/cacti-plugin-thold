@@ -233,6 +233,17 @@ function thold_upgrade_database () {
 		db_execute("ALTER TABLE settings MODIFY column `value` varchar(1024) not null default ''");
 	}
 
+	if (version_compare($oldv, '0.5.0', '<')) {
+		api_plugin_db_add_column ('thold', 'plugin_notification_lists', array('name' => 'phones', 'type' => 'varchar(512)', 'NULL' => true, 'after' => 'emails'));
+
+		db_execute('create table thold_history (id bigint auto_increment, host_id mediumint(8) unsigned not null, 
+			    status tinyint(2) not null default 0, cur_time decimal(10,5) default 0, 
+			    avg_time decimal(10,5) default 0, availability decimal(8,5) not null default 100, 
+			    total_polls int(12) unsigned default 0, failed_polls int(12) unsigned default 0, 
+			    status_fail_date timestamp not null, downtime bigint not null default 0, 
+			    PRIMARY KEY (id));');
+	}
+
 	db_execute('UPDATE settings SET value = "' . $v['version'] . '" WHERE name = "plugin_thold_version"');
 	db_execute('UPDATE plugin_config SET version = "' . $v['version'] . '" WHERE directory = "thold"');
 }
