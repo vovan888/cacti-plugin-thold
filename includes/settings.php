@@ -157,6 +157,18 @@ function thold_config_settings () {
 			'method' => 'checkbox',
 			'default' => ''
 			),
+		'alert_deadnotify' => array(
+			'friendly_name' => 'Enable Dead Hosts Notifications',
+			'description' => 'Enable Dead/Recovering host notification',
+			'method' => 'checkbox',
+			'default' => 'on'
+			),
+		'thold_save_recover_history' => array(
+			'friendly_name' => 'Enable Host Recovering History',
+			'description' => 'This will save host recovering event to thold SQL table (Thresholds->History tab)',
+			'method' => 'checkbox',
+			'default' => 'off'
+			),
 		'thold_filter_default' => array(
 			'friendly_name' => 'Default Status',
 			'description' => 'Default Threshold Filter Status',
@@ -194,12 +206,6 @@ function thold_config_settings () {
 		'thold_log_debug' => array(
 			'friendly_name' => 'Debug Log',
 			'description' => 'Enable logging of debug messages with Thold',
-			'method' => 'checkbox',
-			'default' => 'off'
-			),
-		'thold_save_recover_history' => array(
-			'friendly_name' => 'Save History to SQL Table',
-			'description' => 'This will save host recovering event to thold SQL table',
 			'method' => 'checkbox',
 			'default' => 'off'
 			),
@@ -247,6 +253,24 @@ function thold_config_settings () {
 			'default' => $default_facility,
 			'array' => $syslog_facil_array,
 			),
+		'thold_global_list_header' => array(
+			'friendly_name' => 'Global Notification List',
+			'method' => 'spacer',
+			),
+		'alert_email' => array(
+			'friendly_name' => 'Dead Host Notifications Emails',
+			'description' => 'This is the comma separated list of Email Addresses that the Dead Host Notifications will be sent to if the Global Notification List is selected.',
+			'method' => 'textbox',
+			'size' => 80,
+			'max_length' => 255,
+			),
+		'thold_global_phone_number' => array(
+			'friendly_name' => 'Dead Host Notifications phone numbers for SMS',
+			'description' => 'This is the comma separated list of phone numbers that the Dead Host Notifications will be sent to if the Global Notification List is selected.',
+			'method' => 'textbox',
+			'size' => 80,
+			'max_length' => 255,
+			),
 		'thold_email_header' => array(
 			'friendly_name' => 'Emailing Options',
 			'method' => 'spacer',
@@ -256,19 +280,6 @@ function thold_config_settings () {
 			'description' => 'Allows you to set e-mails with urgent priority',
 			'method' => 'checkbox',
 			'default' => 'off'
-			),
-		'alert_deadnotify' => array(
-			'friendly_name' => 'Dead Hosts Notifications',
-			'description' => 'Enable Dead/Recovering host notification',
-			'method' => 'checkbox',
-			'default' => 'on'
-			),
-		'alert_email' => array(
-			'friendly_name' => 'Dead Host Notifications Email',
-			'description' => 'This is the Email Address that the Dead Host Notifications will be sent to if the Global Notification List is selected.',
-			'method' => 'textbox',
-			'size' => 80,
-			'max_length' => 255,
 			),
 		'thold_down_subject' => array(
 			'friendly_name' => 'Down Host Subject',
@@ -347,17 +358,10 @@ function thold_config_settings () {
 			'method' => 'spacer',
 			),
 		'thold_enable_sms' => array(
-                        'friendly_name' => 'Enable SMS sending',
-                        'description' => 'If checked, this will cause Cacti to send SMS to numbers in Notification Lists.',
-                        'method' => 'checkbox',
-                        'default' => 'off',
-                        ),
-		'thold_global_phone_number' => array(
-			'friendly_name' => 'Dead Host Notifications phone number for SMS',
-			'description' => 'This is the phone number that the Dead Host Notifications will be sent to if the Global Notification List is selected.',
-			'method' => 'textbox',
-			'size' => 40,
-			'max_length' => 255,
+			'friendly_name' => 'Enable SMS sending',
+			'description' => 'If checked, this will cause Cacti to send SMS to numbers in Notification Lists.',
+			'method' => 'checkbox',
+			'default' => 'off',
 			),
                 'thold_gammu_smsd_inject_path' => array(
                         'friendly_name' => 'Path to gammu-smsd-inject',
