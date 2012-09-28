@@ -3125,20 +3125,23 @@ function thold_sms($numbers, $msg) {
 
 	$sms_numbers = explode(',', $numbers);
 
+	if (count($sms_numbers) == 0) {
+		thold_debug('DEBUG: thold_sms: no numbers defined, do nothing');
+		return;
+	}
+
 	foreach($sms_numbers as $key => $value) {
 		if (strlen($thold_sendsms_path)>2) {
 			$command = 'bash ' . $thold_sendsms_path . ' ' . trim($value) . ' "' . $msg . '"';
 		} else {
 			$command = $gammu_smsd_inject_path . ' EMS ' . trim($value) . ' -text "' . $msg . '"';
 		}
-//		shell_exec('ls /tmp 2>&1 >> /tmp/log');
 		exec($command, $command_output, $command_return);
-		//if (read_config_option("log_verbosity") >= POLLER_VERBOSITY_DEBUG || $debug) {
-			cacti_log('DEBUG: thold_sms: command ==>' . $command, true, 'POLLER');
-			foreach ($command_output as $key => $value) {
-				cacti_log('DEBUG: thold_sms: command output ==> ' . $key . ' = ' . $value, true, 'POLLER');
-			}
-			cacti_log('DEBUG: thold_sms: command return value ==> ' . $command_return, true, 'POLLER');
-		//}
+
+		thold_debug('DEBUG: thold_sms: command ==>' . $command, true, 'POLLER');
+		foreach ($command_output as $key => $value) {
+			thold_debug('DEBUG: thold_sms: command output ==> ' . $key . ' = ' . $value, true, 'POLLER');
+		}
+		thold_debug('DEBUG: thold_sms: command return value ==> ' . $command_return, true, 'POLLER');
 	}
 }
