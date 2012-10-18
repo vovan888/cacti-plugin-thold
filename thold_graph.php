@@ -989,7 +989,7 @@ function thold_show_history() {
 		$_REQUEST["sort_column"] = sanitize_search_string(get_request_var("sort_column"));
 	}
 
-	/* clean up search string */
+	/* clean up sort direction */
 	if (isset($_REQUEST["sort_direction"])) {
 		$_REQUEST["sort_direction"] = sanitize_search_string(get_request_var("sort_direction"));
 	}
@@ -1032,7 +1032,7 @@ function thold_show_history() {
 	load_current_session_value("page", "sess_thold_history_current_page", "1");
 	load_current_session_value("host_id", "sess_thold_history_host_id", "-1");
 	load_current_session_value("rows", "sess_thold_history_rows", read_config_option("num_rows_device"));
-	load_current_session_value("sort_column", "sess_thold_history_sort_column", "host_id");
+	load_current_session_value("sort_column", "sess_thold_history_sort_column", "status_fail_date");
 	load_current_session_value("sort_direction", "sess_thold_history_sort_direction", "DESC");
 	load_current_session_value("month", "sess_thold_history_month", "0");
 
