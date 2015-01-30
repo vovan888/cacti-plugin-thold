@@ -173,6 +173,7 @@ function thold_upgrade_database () {
 		$data['columns'][] = array('name' => 'name', 'type' => 'varchar(128)', 'NULL' => false);
 		$data['columns'][] = array('name' => 'description', 'type' => 'varchar(512)', 'NULL' => false);
 		$data['columns'][] = array('name' => 'emails', 'type' => 'varchar(512)', 'NULL' => false);
+		$data['columns'][] = array('name' => 'phones', 'type' => 'varchar(512)', 'NULL' => false);
 		$data['primary'] = 'id';
 		$data['type'] = 'MyISAM';
 		$data['comment'] = 'Table of Notification Lists';
