@@ -3134,7 +3134,7 @@ function thold_sms($numbers, $msg) {
 		if (strlen($thold_sendsms_path)>2) {
 			$command = 'bash ' . $thold_sendsms_path . ' ' . trim($value) . ' "' . $msg . '"';
 		} else {
-			$command = $gammu_smsd_inject_path . ' EMS ' . trim($value) . ' -text "' . $msg . '"';
+			$command = $gammu_smsd_inject_path . ' -c gammu_smsdrc_path EMS ' . trim($value) . ' -text "' . $msg . '"';
 		}
 		exec($command, $command_output, $command_return);
 
